@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Τα Todos μου</title>
+<style>
+  /* ============ Design tokens ============ */
+  :root{
+    --text:#1e1b33;
+    --muted:#7c7a8c;
+    --border:#e7e5f2;
+    --input-bg:#f8f8fc;
+    --item-bg:#ffffff;
+    --pill-bg:#f1f0f8;
+    --accent:#6366f1;
+    --accent-2:#a855f7;
+    --danger:#ef4444;
+    --radius:15px;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html, body{ margin:0; padding:0; }
+
+  body{
+    min-height:100vh;
+    font-family:"Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(circle at 15% 8%, #e0e7ff, transparent 55%),
+      radial-gradient(circle at 85% 18%, #fae8ff, transparent 50%),
+      linear-gradient(160deg, #f8fafc, #eef2ff);
+    background-attachment:fixed;
+    display:flex;
+    justify-content:center;
+    padding:44px 16px 64px;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ============ Card ============ */
+  .app{
+    width:min(700px, 100%);
+    background:rgba(255,255,255,.78);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.65);
+    border-radius:26px;
+    padding:30px 26px 20px;
+    box-shadow:
+      0 30px 60px -30px rgba(49,46,129,.45),
+      0 2px 6px rgba(49,46,129,.06);
+  }
+
+  .app__header h1{
+    margin:0;
+    font-size:clamp(1.6rem, 4vw, 2.1rem);
+    letter-spacing:-.02em;
+    background:linear-gradient(120deg, #4f46e5, #a855f7);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+
+  .subtitle{
+    margin:7px 0 22px;
+    font-size:.9rem;
+    color:var(--muted);
+  }
+
+  /* ============ Form ============ */
+  .form{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .form__row{
+    display:flex;
+    gap:10px;
+  }
+
+  input[type="text"]{
+    flex:1;
+    width:100%;
+    padding:13px 15px;
+    font:inherit;
+    font-size:.95rem;
+    color:inherit;
+    background:var(--input-bg);
+    border:1.5px solid var(--border);
+    border-radius:13px;
+    transition:border-color .2s, box-shadow .2s, background .2s;
+  }
+  input[type="text"]::placeholder{ color:#a5a3b8; }
+  input[type="text"]:focus{
+    outline:none;
+    border-color:var(--accent);
+    background:#fff;
+    box-shadow:0 0 0 4px rgba(99,102,241,.15);
+  }
+
+  .btn-add{
+    padding:0 24px;
+    font:inherit;
+    font-weight:600;
+    color:#fff;
+    white-space:nowrap;
+    cursor:pointer;
+    border:none;
+    border-radius:13px;
+    background:linear-gradient(135deg, #6366f1, #a855f7);
+    box-shadow:0 10px 20px -10px rgba(99,102,241,.95);
+    transition:transform .15s, box-shadow .2s;
+  }
+  .btn-add:hover{
+    transform:translateY(-2px);
+    box-shadow:0 16px 26px -12px rgba(99,102,241,.95);
+  }
+  .btn-add:active{ transform:translateY(0) scale(.98); }
+
+  /* ============ Toolbar ============ */
+  .toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:16px;
+  }
+
+  .search{
+    position:relative;
+    display:flex;
+    align-items:center;
+    flex:1 1 210px;
+  }
+  .search span{
+    position:absolute;
+    left:13px;
+    font-size:.9rem;
+    opacity:.55;
+    pointer-events:none;
+  }
+  .search input{ padding-left:38px; }
+
+  .filters{
+    display:flex;
+    gap:5px;
+    padding:5px;
+    background:var(--pill-bg);
+    border-radius:999px;
+  }
+  .filter{
+    padding:8px 14px;
+    font:inherit;
+    font-size:.83rem;
+    font-weight:600;
+    color:var(--muted);
+    background:transparent;
+    border:none;
+    border-radius:999px;
+    cursor:pointer;
+    transition:color .2s, background .2s, box-shadow .2s;
+  }
+  .filter:hover{ color:var(--text); }
+  .filter.is-active{
+    color:var(--accent);
+    background:#fff;
+    box-shadow:0 4px 12px -4px rgba(79,70,229,.45);
+  }
+
+  /* ============ List ============ */
+  .todo-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .todo-item{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:14px 14px 14px 16px;
+    background:var(--item-bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:0 2px 4px rgba(49,46,129,.04);
+    transition:transform .18s, box-shadow .18s, border-color .18s,
+               opacity .2s, background .2s;
+    animation:fadeUp .3s ease backwards;
+  }
+  .todo-item:hover{
+    transform:translateY(-2px);
+    border-color:#ddd9f5;
+    box-shadow:0 14px 26px -16px rgba(49,46,129,.55);
+  }
+  .todo-item.is-new{ animation:pop .35s cubic-bezier(.2,1.4,.4,1) backwards; }
+  .todo-item.is-removing{
+    opacity:0;
+    transform:translateX(28px) scale(.96);
+  }
+
+  @keyframes fadeUp{
+    from{ opacity:0; transform:translateY(9px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes pop{
+    0%{ opacity:0; transform:scale(.93) translateY(-8px); }
+    100%{ opacity:1; transform:scale(1) translateY(0); }
+  }
+
+  /* ---- Custom checkbox ---- */
+  .check{
+    position:relative;
+    display:inline-flex;
+    flex:0 0 auto;
+    margin-top:2px;
+    cursor:pointer;
+  }
+  .check__input{
+    position:absolute;
+    width:0; height:0;
+    opacity:0;
+  }
+  .check__box{
+    display:grid;
+    place-items:center;
+    width:22px; height:22px;
+    border:2px solid #c7c5da;
+    border-radius:50%;
+    background:#fff;
+    transition:border-color .2s, background .2s, box-shadow .2s;
+  }
+  .check__box::after{
+    content:"";
+    width:5px; height:9px;
+    margin-top:-2px;
+    border:2px solid #fff;
+    border-top:0;
+    border-left:0;
+    opacity:0;
+    transform:rotate(45deg) scale(.2);
+    transition:opacity .2s, transform .2s;
+  }
+  .check:hover .check__box{ border-color:var(--accent); }
+  .check__input:checked + .check__box{
+    background:linear-gradient(135deg, #6366f1, #a855f7);
+    border-color:transparent;
+    box-shadow:0 6px 12px -6px rgba(99,102,241,.95);
+  }
+  .check__input:checked + .check__box::after{
+    opacity:1;
+    transform:rotate(45deg) scale(1);
+  }
+  .check__input:focus-visible + .check__box{
+    box-shadow:0 0 0 4px rgba(99,102,241,.25);
+  }
+
+  /* ---- Content ---- */
+  .todo-content{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+  }
+  .todo-text{
+    margin:0;
+    font-size:.98rem;
+    line-height:1.45;
+    word-break:break-word;
+    transition:color .2s;
+  }
+  .todo-item.is-done .todo-text{
+    color:var(--muted);
+    text-decoration:line-through;
+    text-decoration-color:rgba(124,122,140,.6);
+    text-decoration-thickness:2px;
+  }
+
+  .tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .tag{
+    padding:3px 9px;
+    font-size:.72rem;
+    font-weight:600;
+    color:#4f46e5;
+    background:rgba(99,102,241,.1);
+    border-radius:999px;
+    transition:opacity .2s;
+  }
+  .todo-item.is-done .tag{ opacity:.5; }
+
+  /* ---- Delete ---- */
+  .delete-btn{
+    display:grid;
+    place-items:center;
+    flex:0 0 auto;
+    width:32px; height:32px;
+    color:#b6b4c8;
+    background:transparent;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    transition:color .2s, background .2s, transform .2s;
+  }
+  .delete-btn:hover{
+    color:var(--danger);
+    background:rgba(239,68,68,.12);
+    transform:scale(1.08);
+  }
+  .delete-btn svg{ width:16px; height:16px; }
+
+  /* ============ Empty state ============ */
+  .empty{
+    display:none;
+    padding:40px 10px;
+    text-align:center;
+    color:var(--muted);
+  }
+  .empty.is-visible{
+    display:block;
+    animation:fadeUp .3s ease backwards;
+  }
+  .empty__icon{
+    display:block;
+    margin-bottom:10px;
+    font-size:2rem;
+    opacity:.85;
+  }
+  .empty p{
+    margin:0;
+    font-size:.92rem;
+  }
+
+  /* ============ Footer ============ */
+  .app__footer{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:18px;
+    padding-top:14px;
+    border-top:1px solid var(--border);
+    font-size:.83rem;
+    color:var(--muted);
+  }
+  .link-btn{
+    padding:6px 10px;
+    font:inherit;
+    font-size:.83rem;
+    color:var(--muted);
+    background:none;
+    border:none;
+    border-radius:9px;
+    cursor:pointer;
+    transition:color .2s, background .2s;
+  }
+  .link-btn:hover{
+    color:var(--danger);
+    background:rgba(239,68,68,.08);
+  }
+
+  /* ============ Responsive ============ */
+  @media (max-width:520px){
+    body{ padding:22px 12px 44px; }
+    .app{ padding:22px 16px 18px; border-radius:20px; }
+    .form__row{ flex-direction:column; }
+    .btn-add{ padding:13px 18px; }
+    .filters{ width:100%; justify-content:space-between; }
+    .filter{ flex:1; text-align:center; }
+  }
+
+  /* ============ Dark mode ============ */
+  @media (prefers-color-scheme: dark){
+    :root{
+      --text:#e8e6f5;
+      --muted:#a09dbb;
+      --border:#2e2b45;
+      --input-bg:rgba(255,255,255,.05);
+      --item-bg:rgba(255,255,255,.045);
+      --pill-bg:rgba(255,255,255,.07);
+    }
+    body{
+      background:
+        radial-gradient(circle at 15% 8%, #241f4d, transparent 55%),
+        radial-gradient(circle at 85% 18%, #3b1f4d, transparent 50%),
+        linear-gradient(160deg, #0f0e1a, #151329);
+    }
+    .app{
+      background:rgba(23,21,39,.76);
+      border-color:rgba(255,255,255,.08);
+      box-shadow:0 30px 60px -30px rgba(0,0,0,.85);
+    }
+    input[type="text"]:focus{ background:rgba(255,255,255,.07); }
+    .filter.is-active{ background:rgba(255,255,255,.1); color:#c7c5ff; }
+    .check__box{ background:transparent; border-color:#4b4870; }
+    .todo-item:hover{ border-color:#3d3960; }
+    .tag{ color:#c7c5ff; background:rgba(139,92,246,.18); }
+  }
+</style>
+</head>
+<body>
+
+  <main class="app">
+    <header class="app__header">
+      <h1>Τα Todos μου</h1>
+      <p class="subtitle" id="counter">Φόρτωση…</p>
+    </header>
+
+    <form id="todo-form" class="form" autocomplete="off">
+      <div class="form__row">
+        <input type="text" id="todo-input" placeholder="Τι πρέπει να κάνεις;" required>
+        <button type="submit" class="btn-add">Προσθήκη</button>
+      </div>
+      <input type="text" id="tags-input" placeholder="tags (χωρισμένα με κόμμα)">
+    </form>
+
+    <div class="toolbar">
+      <div class="search">
+        <span>🔍</span>
+        <input type="text" id="search" placeholder="Αναζήτηση...">
+      </div>
+      <div class="filters" id="filters">
+        <button type="button" class="filter is-active" data-filter="all">Όλα</button>
+        <button type="button" class="filter" data-filter="active">Ενεργά</button>
+        <button type="button" class="filter" data-filter="completed">Ολοκληρωμένα</button>
+      </div>
+    </div>
+
+    <ul id="todo-list" class="todo-list"></ul>
+
+    <div class="empty" id="empty">
+      <span class="empty__icon" id="empty-icon">📝</span>
+      <p id="empty-text">Η λίστα σου είναι άδεια.</p>
+    </div>
+
+    <footer class="app__footer">
+      <span id="items-left"></span>
+      <button type="button" class="link-btn" id="clear-completed" hidden>Καθαρισμός ολοκληρωμένων</button>
+    </footer>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== Setup ==================== */
+  const STORAGE_KEY = 'my-todos-v1';
+
+  const form        = document.getElementById('todo-form');
+  const input       = document.getElementById('todo-input');
+  const tagsInput   = document.getElementById('tags-input');
+  const list        = document.getElementById('todo-list');
+  const searchInput = document.getElementById('search');
+  const filtersBox  = document.getElementById('filters');
+  const emptyBox    = document.getElementById('empty');
+  const emptyIcon   = document.getElementById('empty-icon');
+  const emptyText   = document.getElementById('empty-text');
+  const counterEl   = document.getElementById('counter');
+  const itemsLeftEl = document.getElementById('items-left');
+  const clearBtn    = document.getElementById('clear-completed');
+
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  let todos       = load();
+  let filter      = 'all';
+  let query       = '';
+  const freshIds    = new Set(); // ids που μόλις προστέθηκαν (για animation)
+  const removingIds = new Set(); // ids που βρίσκονται σε διαδικασία διαγραφής
+
+  /* ==================== Local Storage ==================== */
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const data = JSON.parse(raw);
+      if (!Array.isArray(data)) return [];
+
+      return data
+        .filter(t => t && typeof t.text === 'string' && t.text.trim())
+        .map(t => ({
+          id: t.id ? String(t.id) : uid(),
+          text: t.text,
+          tags: Array.isArray(t.tags) ? t.tags.map(String).filter(Boolean) : [],
+          completed: !!t.completed,
+          createdAt: Number(t.createdAt) || Date.now()
+        }));
+    } catch (err) {
+      console.warn('Αποτυχία ανάγνωσης από το Local Storage:', err);
+      return [];
+    }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+    } catch (err) {
+      console.warn('Αποτυχία αποθήκευσης στο Local Storage:', err);
+    }
+  }
+
+  /* ==================== Actions ==================== */
+  function addTodo(text, tags) {
+    const todo = {
+      id: uid(),
+      text: text,
+      tags: tags,
+      completed: false,
+      createdAt: Date.now()
+    };
+    todos.unshift(todo);
+    freshIds.add(todo.id);
+    save();
+    render();
+  }
+
+  function toggleTodo(id) {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+    todo.completed = !todo.completed;
+    save();
+    render();
+  }
+
+  function removeTodo(id, el) {
+    const finish = () => {
+      removingIds.delete(id);
+      todos = todos.filter(t => t.id !== id);
+      save();
+      render();
+    };
+
+    if (el && !removingIds.has(id)) {
+      removingIds.add(id);
+      el.classList.add('is-removing');
+      setTimeout(finish, 200);
+    } else {
+      finish();
+    }
+  }
+
+  function clearCompleted() {
+    if (!todos.some(t => t.completed)) return;
+    todos = todos.filter(t => !t.completed);
+    save();
+    render();
+  }
+
+  /* ==================== Filtering ==================== */
+  function getVisible() {
+    const q = query.trim().toLowerCase();
+
+    return todos.filter(todo => {
+      if (removingIds.has(todo.id)) return false;
+      if (filter === 'active' && todo.completed) return false;
+      if (filter === 'completed' && !todo.completed) return false;
+
+      if (q) {
+        const haystack = (todo.text + ' ' + todo.tags.join(' ')).toLowerCase();
+        if (haystack.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  /* ==================== Rendering ==================== */
+  const TRASH_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M3 6h18"/>' +
+    '<path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/>' +
+    '<path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/>' +
+    '<path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+
+  function createItem(todo, index) {
+    const li = document.createElement('li');
+    li.className = 'todo-item' + (todo.completed ? ' is-done' : '');
+    li.dataset.id = todo.id;
+    li.style.animationDelay = Math.min(index * 40, 320) + 'ms';
+
+    if (freshIds.has(todo.id)) {
+      freshIds.delete(todo.id);
+      li.classList.add('is-new');
+    }
+
+    /* --- checkbox --- */
+    const label = document.createElement('label');
+    label.className = 'check';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'check__input';
+    cb.checked = todo.completed;
+    cb.setAttribute('aria-label', todo.completed ? 'Σήμανση ως ενεργή' : 'Σήμανση ως ολοκληρωμένη');
+    cb.addEventListener('change', () => toggleTodo(todo.id));
+
+    const box = document.createElement('span');
+    box.className = 'check__box';
+
+    label.append(cb, box);
+
+    /* --- content --- */
+    const content = document.createElement('div');
+    content.className = 'todo-content';
+
+    const p = document.createElement('p');
+    p.className = 'todo-text';
+    p.textContent = todo.text;
+    content.appendChild(p);
+
+    if (todo.tags.length) {
+      const tagsWrap = document.createElement('div');
+      tagsWrap.className = 'tags';
+      todo.tags.forEach(tag => {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.textContent = '#' + tag;
+        tagsWrap.appendChild(span);
+      });
+      content.appendChild(tagsWrap);
+    }
+
+    /* --- delete --- */
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'delete-btn';
+    del.title = 'Διαγραφή';
+    del.setAttribute('aria-label', 'Διαγραφή εργασίας');
+    del.innerHTML = TRASH_SVG;
+    del.addEventListener('click', () => removeTodo(todo.id, li));
+
+    li.append(label, content, del);
+    return li;
+  }
+
+  function render() {
+    const visible = getVisible();
+
+    list.innerHTML = '';
+    visible.forEach((todo, i) => list.appendChild(createItem(todo, i)));
+
+    /* empty state */
+    const isEmpty = visible.length === 0;
+    emptyBox.classList.toggle('is-visible', isEmpty);
+
+    if (isEmpty) {
+      const q = query.trim();
+      if (q) {
+        emptyIcon.textContent = '🔍';
+        emptyText.textContent = 'Δεν βρέθηκαν εργασίες για «' + q + '».';
+      } else if (filter === 'active') {
+        emptyIcon.textContent = '🎉';
+        emptyText.textContent = 'Δεν υπάρχουν ενεργές εργασίες. Μπράβο!';
+      } else if (filter === 'completed') {
+        emptyIcon.textContent = '📭';
+        emptyText.textContent = 'Δεν έχεις ολοκληρώσει ακόμη καμία εργασία.';
+      } else {
+        emptyIcon.textContent = '📝';
+        emptyText.textContent = 'Η λίστα σου είναι άδεια. Πρόσθεσε την πρώτη σου εργασία!';
+      }
+    }
+
+    updateStats();
+  }
+
+  function updateStats() {
+    const total  = todos.length;
+    const active = todos.filter(t => !t.completed).length;
+    const done   = total - active;
+
+    counterEl.textContent = total === 0
+      ? 'Καμία εργασία ακόμη — ξεκίνα τώρα!'
+      : total + (total === 1 ? ' εργασία' : ' εργασίες') +
+        ' · ' + active + (active === 1 ? ' ενεργή' : ' ενεργές') +
+        ' · ' + done + (done === 1 ? ' ολοκληρωμένη' : ' ολοκληρωμένες');
+
+    itemsLeftEl.textContent = active + (active === 1 ? ' εργασία μένει' : ' εργασίες μένουν');
+    clearBtn.hidden = done === 0;
+  }
+
+  function syncFilterButtons() {
+    Array.prototype.forEach.call(filtersBox.children, btn => {
+      btn.classList.toggle('is-active', btn.dataset.filter === filter);
+    });
+  }
+
+  /* ==================== Events ==================== */
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    const text = input.value.trim();
+    if (!text) {
+      input.focus();
+      return;
+    }
+
+    const tags = tagsInput.value
+      .split(',')
+      .map(s => s.trim().replace(/^#+/, ''))
+      .filter(Boolean);
+
+    addTodo(text, Array.from(new Set(tags)).slice(0, 6));
+
+    input.value = '';
+    tagsInput.value = '';
+
+    // Αν είμαστε στο φίλτρο "Ολοκληρωμένα", γύρνα στο "Όλα" για να φανεί η νέα εργασία
+    if (filter === 'completed') {
+      filter = 'all';
+      syncFilterButtons();
+      render();
+    }
+
+    input.focus();
+  });
+
+  searchInput.addEventListener('input', () => {
+    query = searchInput.value;
+    render();
+  });
+
+  filtersBox.addEventListener('click', e => {
+    const btn = e.target.closest('.filter');
+    if (!btn) return;
+    filter = btn.dataset.filter;
+    syncFilterButtons();
+    render();
+  });
+
+  clearBtn.addEventListener('click', clearCompleted);
+
+  /* ==================== Init ==================== */
+  render();
+})();
+</script>
+</body>
+</html>
